@@ -1,0 +1,2 @@
+import { NormalizableVectorNetwork, cloneVectorNetwork, mergeVectorNetworks, normalizeVectorNetwork, transformVectorNetwork, validateVectorNetwork, vectorNetworksEqual } from "./vector-network2.js";
+export { NormalizableVectorNetwork, cloneVectorNetwork, mergeVectorNetworks, normalizeVectorNetwork, transformVectorNetwork, validateVectorNetwork, vectorNetworksEqual };

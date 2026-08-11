@@ -1,0 +1,267 @@
+import { styleToWeight } from "../../text/font-style.js";
+import { parseColor } from "../../color/index.js";
+import { defineTool, nodeNotFound } from "../schema.js";
+import { applyStyleToRange } from "../../text/style-runs.js";
+//#region src/tools/modify/text.ts
+const setText = defineTool({
+	name: "set_text",
+	mutates: true,
+	description: "Set text content of a text node.",
+	params: {
+		id: {
+			type: "string",
+			description: "Node ID",
+			required: true
+		},
+		text: {
+			type: "string",
+			description: "Text content",
+			required: true
+		}
+	},
+	execute: (figma, { id, text }) => {
+		const node = figma.getNodeById(id);
+		if (!node) return { error: `Node "${id}" not found` };
+		node.characters = text;
+		return {
+			id,
+			text
+		};
+	}
+});
+const setFont = defineTool({
+	name: "set_font",
+	mutates: true,
+	description: "Set font properties of a text node.",
+	params: {
+		id: {
+			type: "string",
+			description: "Node ID",
+			required: true
+		},
+		family: {
+			type: "string",
+			description: "Font family name"
+		},
+		size: {
+			type: "number",
+			description: "Font size",
+			min: 1
+		},
+		style: {
+			type: "string",
+			description: "Font style (e.g. \"Bold\", \"Regular\", \"Bold Italic\")"
+		}
+	},
+	execute: (figma, args) => {
+		const node = figma.getNodeById(args.id);
+		if (!node) return nodeNotFound(args.id);
+		if (args.size !== void 0) node.fontSize = args.size;
+		if (args.family || args.style) {
+			const current = node.fontName;
+			node.fontName = {
+				family: args.family ?? current.family,
+				style: args.style ?? current.style
+			};
+		}
+		return {
+			id: args.id,
+			fontName: node.fontName,
+			fontSize: node.fontSize
+		};
+	}
+});
+const setFontRange = defineTool({
+	name: "set_font_range",
+	mutates: true,
+	description: "Set font properties for a text range.",
+	params: {
+		id: {
+			type: "string",
+			description: "Node ID",
+			required: true
+		},
+		start: {
+			type: "number",
+			description: "Start character index",
+			required: true,
+			min: 0
+		},
+		end: {
+			type: "number",
+			description: "End character index",
+			required: true,
+			min: 0
+		},
+		family: {
+			type: "string",
+			description: "Font family name"
+		},
+		size: {
+			type: "number",
+			description: "Font size",
+			min: 1
+		},
+		style: {
+			type: "string",
+			description: "Font style"
+		},
+		color: {
+			type: "color",
+			description: "Text color (hex)"
+		}
+	},
+	execute: (figma, args) => {
+		const node = figma.getNodeById(args.id);
+		if (!node) return nodeNotFound(args.id);
+		const override = {};
+		if (args.family) override.fontFamily = args.family;
+		if (args.size) override.fontSize = args.size;
+		if (args.style) {
+			if (args.style.toLowerCase().includes("italic")) override.italic = true;
+			override.fontWeight = styleToWeight(args.style);
+		}
+		if (args.color) override.fills = [{
+			type: "SOLID",
+			color: parseColor(args.color),
+			opacity: 1,
+			visible: true
+		}];
+		const raw = figma.graph.getNode(node.id);
+		if (!raw) return { error: `Node "${args.id}" not found` };
+		const runs = applyStyleToRange(raw.styleRuns, args.start, args.end, override, raw.text.length);
+		figma.graph.updateNode(node.id, { styleRuns: runs });
+		return {
+			id: args.id,
+			range: {
+				start: args.start,
+				end: args.end
+			}
+		};
+	}
+});
+const setTextResize = defineTool({
+	name: "set_text_resize",
+	mutates: true,
+	description: "Set text auto-resize mode.",
+	params: {
+		id: {
+			type: "string",
+			description: "Node ID",
+			required: true
+		},
+		mode: {
+			type: "string",
+			description: "Resize mode",
+			required: true,
+			enum: [
+				"NONE",
+				"WIDTH_AND_HEIGHT",
+				"HEIGHT",
+				"TRUNCATE"
+			]
+		}
+	},
+	execute: (figma, { id, mode }) => {
+		const node = figma.getNodeById(id);
+		if (!node) return { error: `Node "${id}" not found` };
+		node.textAutoResize = mode;
+		return {
+			id,
+			textAutoResize: mode
+		};
+	}
+});
+const setTextProperties = defineTool({
+	name: "set_text_properties",
+	mutates: true,
+	description: "Set text layout properties: alignment, auto-resize, text case, decoration, truncation.",
+	params: {
+		id: {
+			type: "string",
+			description: "Text node ID",
+			required: true
+		},
+		align_horizontal: {
+			type: "string",
+			description: "Horizontal text alignment",
+			enum: [
+				"LEFT",
+				"CENTER",
+				"RIGHT",
+				"JUSTIFIED"
+			]
+		},
+		align_vertical: {
+			type: "string",
+			description: "Vertical text alignment",
+			enum: [
+				"TOP",
+				"CENTER",
+				"BOTTOM"
+			]
+		},
+		auto_resize: {
+			type: "string",
+			description: "Text auto-resize mode",
+			enum: [
+				"NONE",
+				"WIDTH_AND_HEIGHT",
+				"HEIGHT",
+				"TRUNCATE"
+			]
+		},
+		direction: {
+			type: "string",
+			description: "Text direction",
+			enum: [
+				"AUTO",
+				"LTR",
+				"RTL"
+			]
+		},
+		text_decoration: {
+			type: "string",
+			description: "Text decoration",
+			enum: [
+				"NONE",
+				"UNDERLINE",
+				"STRIKETHROUGH"
+			]
+		}
+	},
+	execute: (figma, args) => {
+		const node = figma.getNodeById(args.id);
+		if (!node) return nodeNotFound(args.id);
+		if (node.type !== "TEXT") return { error: `Node "${args.id}" is not a TEXT node` };
+		const updated = [];
+		if (args.align_horizontal !== void 0) {
+			node.textAlignHorizontal = args.align_horizontal;
+			updated.push("textAlignHorizontal");
+		}
+		if (args.align_vertical !== void 0) {
+			node.textAlignVertical = args.align_vertical;
+			updated.push("textAlignVertical");
+		}
+		if (args.auto_resize !== void 0) {
+			node.textAutoResize = args.auto_resize;
+			updated.push("textAutoResize");
+		}
+		if (args.direction !== void 0) {
+			node.textDirection = args.direction;
+			updated.push("textDirection");
+		}
+		if (args.text_decoration !== void 0) {
+			node.textDecoration = args.text_decoration;
+			updated.push("textDecoration");
+		}
+		return {
+			id: args.id,
+			updated
+		};
+	}
+});
+//#endregion
+export { setFont, setFontRange, setText, setTextProperties, setTextResize };
+
+//# sourceMappingURL=text.js.map

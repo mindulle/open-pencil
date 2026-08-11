@@ -1,0 +1,2 @@
+import { NodeCloneMode, cloneNodeProps, copyEffect, copyEffects, copyFill, copyFills, copyGeometryPaths, copyLayoutGrids, copyStroke, copyStrokes, copyStyleRun, copyStyleRuns, hasSameCopySource, markCopySource, scaleGeometryPaths } from "./coordinate.js";
+export { NodeCloneMode, cloneNodeProps, copyEffect, copyEffects, copyFill, copyFills, copyGeometryPaths, copyLayoutGrids, copyStroke, copyStrokes, copyStyleRun, copyStyleRuns, hasSameCopySource, markCopySource, scaleGeometryPaths };

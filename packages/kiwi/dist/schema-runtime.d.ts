@@ -1,0 +1,2 @@
+import { ByteBuffer, Definition, Field, Schema, compileSchema, decodeBinarySchema, encodeBinarySchema, expectEnumValue, expectFieldNumber, findDefinition, findField, parseSchema, validateSchema } from "./index.js";
+export { ByteBuffer, type Definition, type Field, type Schema, compileSchema, decodeBinarySchema, encodeBinarySchema, expectEnumValue, expectFieldNumber, findDefinition, findField, parseSchema, validateSchema };

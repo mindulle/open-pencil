@@ -2,8 +2,10 @@
 node_modules/
 
 # Build outputs
-dist/
+/dist/
 dist-ssr/
+# Allow pre-built package dist for CF Pages (skip build:packages step)
+!packages/*/dist/
 coverage/
 *.tsbuildinfo
 

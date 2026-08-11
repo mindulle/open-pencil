@@ -1,0 +1,2 @@
+import { Color, GUID, JSONArray, JSONObject, JSONPrimitive, JSONValue, Matrix, Rect, Size, Vector } from "./primitives2.js";
+export { Color, GUID, JSONArray, JSONObject, JSONPrimitive, JSONValue, Matrix, Rect, Size, Vector };

@@ -1,0 +1,15 @@
+import { transformTextCase } from "./case.js";
+import { ARABIC_LOCAL_FALLBACK_FAMILIES, ARABIC_REMOTE_FALLBACK_FAMILIES, cjkFallbackScriptForLanguage, cjkLocalFallbackFamilies, fontFallbackEntry, fontFallbackManifest } from "./fallbacks.js";
+import { FONT_WEIGHT_NAMES, chooseLocalFontMatch, isVariableFont, normalizeFontFamily, styleToVariant, styleToWeight, weightToFigmaStyle, weightToStyle } from "./font-style.js";
+import { collectGraphFontKeys, collectGraphFontRequirements } from "./requirements.js";
+import { DEFAULT_WEB_FONT_PROVIDER_SETTINGS, WEB_FONT_PROVIDER_IDS, WEB_FONT_PROVIDER_LABELS, WebFontResolver, normalizedCoverageText, webFontSubsetsForText } from "./web-fonts.js";
+import { FontManager, fontManager } from "./fonts.js";
+import { fontFallbackScriptForCharacter, textNeededFallbackScripts, textNeedsFallbackScript } from "./coverage.js";
+import { detectTextDirection, isLogicalTextAlignEnd, isLogicalTextAlignStart, resolveNodeLayoutDirection, resolveNodeTextDirection, resolveTextDirection } from "./direction.js";
+import { FontResolver } from "./resolver/resolver.js";
+import { missingGlyphCharacters, missingGlyphScripts } from "./resolver/coverage.js";
+import { fontCoverageDemand, fontFaceDemand, fontRemoteCoverageDemand, fontResolver } from "./resolver/index.js";
+import { TextEditor } from "./editor.js";
+import { missingGraphFontScripts } from "./resolved-requirements.js";
+import { adjustRunsForDelete, adjustRunsForInsert, applyStyleToRange, getStyleAt, removeStyleFromRange, selectionHasStyle, toggleBoldInRange, toggleDecorationInRange, toggleItalicInRange } from "./style-runs.js";
+export { ARABIC_LOCAL_FALLBACK_FAMILIES, ARABIC_REMOTE_FALLBACK_FAMILIES, DEFAULT_WEB_FONT_PROVIDER_SETTINGS, FONT_WEIGHT_NAMES, FontManager, FontResolver, TextEditor, WEB_FONT_PROVIDER_IDS, WEB_FONT_PROVIDER_LABELS, WebFontResolver, adjustRunsForDelete, adjustRunsForInsert, applyStyleToRange, chooseLocalFontMatch, cjkFallbackScriptForLanguage, cjkLocalFallbackFamilies, collectGraphFontKeys, collectGraphFontRequirements, detectTextDirection, fontCoverageDemand, fontFaceDemand, fontFallbackEntry, fontFallbackManifest, fontFallbackScriptForCharacter, fontManager, fontRemoteCoverageDemand, fontResolver, getStyleAt, isLogicalTextAlignEnd, isLogicalTextAlignStart, isVariableFont, missingGlyphCharacters, missingGlyphScripts, missingGraphFontScripts, normalizeFontFamily, normalizedCoverageText, removeStyleFromRange, resolveNodeLayoutDirection, resolveNodeTextDirection, resolveTextDirection, selectionHasStyle, styleToVariant, styleToWeight, textNeededFallbackScripts, textNeedsFallbackScript, toggleBoldInRange, toggleDecorationInRange, toggleItalicInRange, transformTextCase, webFontSubsetsForText, weightToFigmaStyle, weightToStyle };

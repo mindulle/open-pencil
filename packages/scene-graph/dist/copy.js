@@ -1,0 +1,2 @@
+import { cloneNodeProps, copyEffect, copyEffects, copyFill, copyFills, copyGeometryPaths, copyLayoutGrids, copyStroke, copyStrokes, copyStyleRun, copyStyleRuns, hasSameCopySource, markCopySource, scaleGeometryPaths } from "./chunks/copy.js";
+export { cloneNodeProps, copyEffect, copyEffects, copyFill, copyFills, copyGeometryPaths, copyLayoutGrids, copyStroke, copyStrokes, copyStyleRun, copyStyleRuns, hasSameCopySource, markCopySource, scaleGeometryPaths };

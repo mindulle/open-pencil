@@ -1,0 +1,106 @@
+import { encodeBase64 } from "../../bytes/base64.js";
+import { defineTool } from "../schema.js";
+//#region src/tools/vector/export.ts
+const exportSVG = defineTool({
+	name: "export_svg",
+	description: "Export nodes as SVG markup. Returns the SVG string.",
+	params: {
+		ids: {
+			type: "string[]",
+			description: "Node IDs to export. Omit to export all top-level nodes on the current page."
+		},
+		path: {
+			type: "string",
+			description: "Write SVG to this path instead of returning it (requires OPENPENCIL_MCP_ROOT)"
+		}
+	},
+	execute: async (figma, args) => {
+		const { renderNodesToSVG } = await import("../../io/formats/svg/index.js");
+		const pageId = figma.currentPageId;
+		const ids = args.ids && args.ids.length > 0 ? args.ids : figma.currentPage.children.map((node) => node.id);
+		const svg = renderNodesToSVG(figma.graph, pageId, ids);
+		if (!svg) return { error: "No visible nodes to export" };
+		return { svg };
+	}
+});
+const exportPDF = defineTool({
+	name: "export_pdf",
+	description: "Export nodes as a vector PDF document. Text remains selectable, paths stay sharp at any zoom. Returns base64-encoded PDF data.",
+	params: {
+		ids: {
+			type: "string[]",
+			description: "Node IDs to export. Omit to export all top-level nodes on the current page."
+		},
+		path: {
+			type: "string",
+			description: "Write PDF to this path instead of returning base64 (requires OPENPENCIL_MCP_ROOT)"
+		}
+	},
+	execute: async (figma, args) => {
+		const { renderNodesToPDF } = await import("../../io/formats/pdf/index.js");
+		const pageId = figma.currentPageId;
+		const ids = args.ids && args.ids.length > 0 ? args.ids : figma.currentPage.children.map((node) => node.id);
+		const data = await renderNodesToPDF(figma.graph, pageId, ids);
+		if (!data || data.length === 0) return { error: "No visible nodes to export" };
+		return {
+			mimeType: "application/pdf",
+			base64: encodeBase64(data),
+			byteLength: data.length
+		};
+	}
+});
+const exportImage = defineTool({
+	name: "export_image",
+	description: "Export nodes as a raster image (PNG, JPG, or WEBP). Returns base64-encoded image data. Use to visually verify designs.",
+	params: {
+		ids: {
+			type: "string[]",
+			description: "Node IDs to export. Omit to export all top-level nodes on the current page."
+		},
+		format: {
+			type: "string",
+			description: "Image format",
+			enum: [
+				"PNG",
+				"JPG",
+				"WEBP"
+			],
+			default: "PNG"
+		},
+		scale: {
+			type: "number",
+			description: "Export scale multiplier (default: 1)",
+			default: 1,
+			min: .1,
+			max: 4
+		},
+		path: {
+			type: "string",
+			description: "Write image to this path instead of returning base64 (requires OPENPENCIL_MCP_ROOT)"
+		}
+	},
+	execute: async (figma, args) => {
+		if (!figma.exportImage) return { error: "Image export is not available in this environment" };
+		const ids = args.ids && args.ids.length > 0 ? args.ids : figma.currentPage.children.map((node) => node.id);
+		const format = (args.format ?? "PNG").toUpperCase();
+		const data = await figma.exportImage(ids, {
+			scale: args.scale ?? 1,
+			format
+		});
+		if (!data || data.length === 0) return { error: "No visible nodes to export" };
+		const base64 = encodeBase64(data);
+		return {
+			mimeType: {
+				PNG: "image/png",
+				JPG: "image/jpeg",
+				WEBP: "image/webp"
+			}[format],
+			base64,
+			byteLength: data.length
+		};
+	}
+});
+//#endregion
+export { exportImage, exportPDF, exportSVG };
+
+//# sourceMappingURL=export.js.map

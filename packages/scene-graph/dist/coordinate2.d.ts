@@ -1,0 +1,2 @@
+import { getAbsolutePosition, getAbsolutePositionFull, getAbsoluteRotation, getNodeLocalMatrix, getNodeWorldBounds, getWorldHandles, getWorldMatrix } from "./coordinate.js";
+export { getAbsolutePosition, getAbsolutePositionFull, getAbsoluteRotation, getNodeLocalMatrix, getNodeWorldBounds, getWorldHandles, getWorldMatrix };

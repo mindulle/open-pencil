@@ -1,0 +1,83 @@
+import { FontFallbackScript } from "./fallbacks.js";
+import { WebFontFetch, WebFontProviderId } from "./web-fonts.js";
+import { DownloadedFontCache, FontFamilyOption, FontFamilySource, FontInfo, HostFontLoader, LocalFontAccessState } from "./font-sources.js";
+import { FONT_WEIGHT_NAMES, chooseLocalFontMatch, isVariableFont, normalizeFontFamily, styleToVariant, styleToWeight, weightToFigmaStyle, weightToStyle } from "./font-style.js";
+import { CanvasKit, TypefaceFontProvider } from "canvaskit-wasm";
+import { SceneGraph } from "@open-pencil/scene-graph";
+
+//#region src/text/fonts.d.ts
+declare class FontManager {
+  private loadedFamilies;
+  private supplementalFamilyData;
+  private remoteCoverage;
+  private blockedNodeIds;
+  private fontProvider;
+  private fontProviders;
+  private registrationGeneration;
+  private providerRegistrations;
+  private localFonts;
+  private localFontAccessState;
+  private downloadedFontCache;
+  private fallbackUserAgent;
+  private hostFontLoader;
+  private webFonts;
+  private cjkFallbackFamilies;
+  private cjkFallbackPromise;
+  private arabicFallbackFamilies;
+  private arabicFallbackPromise;
+  attachProvider(_canvasKit: CanvasKit, provider: TypefaceFontProvider): void;
+  detachProvider(provider?: TypefaceFontProvider | null): void;
+  provider(): TypefaceFontProvider | null;
+  generation(): number;
+  blockNodesUntilFontsResolve(nodeIds: readonly string[]): void;
+  unblockNodes(nodeIds: readonly string[]): void;
+  isNodeBlocked(nodeId: string): boolean;
+  localAccessState(): LocalFontAccessState;
+  setDownloadedFontCache(cache: DownloadedFontCache | null): void;
+  setFallbackUserAgent(userAgent: string | undefined): void;
+  setHostFontLoader(loader: HostFontLoader | null): void;
+  /** @deprecated Use setHostFontLoader. Scheduled for removal in v0.15. */
+  setHostFallbackFontLoader(loader: HostFontLoader | null): void;
+  setOnlineFontProviders(settings: Partial<Record<WebFontProviderId, boolean>>): void;
+  setWebFontFetch(fetcher: WebFontFetch | null): void;
+  enabledOnlineFontProviders(): WebFontProviderId[];
+  loadCachedFont(family: string, style?: string, characters?: string): Promise<ArrayBuffer | null>;
+  requestLocalFontAccess(): Promise<FontInfo[]>;
+  listFamilies(): Promise<string[]>;
+  listFamilyOptions(): Promise<FontFamilyOption[]>;
+  preloadWebFontFamilies(): void;
+  preloadGoogleFamilies(): void;
+  fetchBundledFont(url: string): Promise<ArrayBuffer | null>;
+  loadLocalFont(family: string, style?: string): Promise<ArrayBuffer | null>;
+  loadRemoteFont(family: string, style?: string, characters?: string): Promise<ArrayBuffer | null>;
+  loadFont(family: string, style?: string, characters?: string): Promise<ArrayBuffer | null>;
+  ensureNodeFont(family: string, weight: number): Promise<void>;
+  markLoaded(family: string, style: string, data: ArrayBuffer): void;
+  isLoaded(family: string): boolean;
+  isStyleLoaded(family: string, style: string): boolean;
+  remoteStyleNeedsCoverage(family: string, style: string, characters: readonly string[]): boolean;
+  loadedData(family: string, style: string): ArrayBuffer | null;
+  renderFamily(family: string, _style: string): string;
+  collectFontKeys(graph: SceneGraph, nodeIds: string[]): Array<[string, string]>;
+  ensureCJKFallback(): Promise<string[]>;
+  getCJKFallbackFamilies(): string[];
+  setCJKFallbackFamily(family: string): void;
+  ensureArabicFallback(): Promise<string[]>;
+  ensureFallbackPack(scripts?: FontFallbackScript[], characters?: string): Promise<Partial<Record<FontFallbackScript, string[]>>>;
+  getArabicFallbackFamilies(): string[];
+  setArabicFallbackFamily(family: string): void;
+  private ensureFallbackFamilies;
+  private loadHostFont;
+  private readDownloadedFont;
+  private writeDownloadedFont;
+  private findLocalFont;
+  private registerSupplemental;
+  private registerAndCache;
+  private registerFontInCanvasKit;
+  private registerFontInProvider;
+  private registerFontInBrowser;
+}
+declare const fontManager: FontManager;
+//#endregion
+export { DownloadedFontCache, FONT_WEIGHT_NAMES, FontFamilyOption, FontFamilySource, FontInfo, FontManager, HostFontLoader, LocalFontAccessState, chooseLocalFontMatch, fontManager, isVariableFont, normalizeFontFamily, styleToVariant, styleToWeight, weightToFigmaStyle, weightToStyle };
+//# sourceMappingURL=fonts.d.ts.map

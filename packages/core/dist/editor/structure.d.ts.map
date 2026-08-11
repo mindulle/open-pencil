@@ -1,0 +1,1 @@
+{"version":3,"file":"structure.d.ts","names":[],"sources":["../../src/editor/structure.ts"],"mappings":";;;;;;iBAwBgB,sBAAA,CAAuB,GAAA,EAAK,aAAA;;mCAmFF,sBAAA,KAAsB,sBAAA;4BAI7B,sBAAA;2BAkBH,IAAA;;;;;qCAjGU,WAAA;+FAgB0B,aAAA,EACjD,SAAA,IAAW,UAAA,GACb,OAAA,CAAQ,SAAA;oCAKkB,SAAA;iCAIH,SAAA;kCAIC,SAAA;4CAMU,SAAA,IAAW,SAAA,EAAa,gBAAA;kCAIlC,SAAA;mCAIC,SAAA;uCAII,SAAA;yCAME,SAAA"}

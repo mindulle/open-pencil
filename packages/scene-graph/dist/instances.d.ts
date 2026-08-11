@@ -1,0 +1,2 @@
+import { NodeCloneMode, copyInstanceComponentProps, createInstance, detachInstance, getInstances, getMainComponent, populateInstanceChildren, swapInstanceComponent, syncInstances } from "./coordinate.js";
+export { type NodeCloneMode, copyInstanceComponentProps, createInstance, detachInstance, getInstances, getMainComponent, populateInstanceChildren, swapInstanceComponent, syncInstances };

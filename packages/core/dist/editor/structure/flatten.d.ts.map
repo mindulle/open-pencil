@@ -1,0 +1,1 @@
+{"version":3,"file":"flatten.d.ts","names":[],"sources":["../../../src/editor/structure/flatten.ts"],"mappings":";;;;;KASK,kBAAA,UAA4B,yBAAyB;AAAA,KAErD,cAAA;EACH,KAAA;EACA,cAAA,IAAkB,IAAA,EAAM,SAAA;EACxB,kBAAA,GAAqB,kBAAkB;AAAA;AAAA,iBAGzB,eAAA,CACd,GAAA,EAAK,aAAA,EACL,aAAA,EAAe,SAAA,IACf,OAAA,GAAS,cAAA;AAAA,iBAuDK,qBAAA,CAAsB,GAAA,EAAK,aAAA,EAAe,aAAA,EAAe,SAAS"}

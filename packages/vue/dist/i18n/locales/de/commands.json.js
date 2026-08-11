@@ -1,0 +1,48 @@
+//#region src/i18n/locales/de/commands.json
+var commands_default = {
+	undo: "Rückgängig",
+	redo: "Wiederholen",
+	selectAll: "Alles auswählen",
+	duplicate: "Duplizieren",
+	"delete": "Löschen",
+	group: "Gruppieren",
+	ungroup: "Gruppierung aufheben",
+	createComponent: "Komponente erstellen",
+	createComponentSet: "Komponentensatz erstellen",
+	createInstance: "Instanz erstellen",
+	detachInstance: "Instanz lösen",
+	goToMainComponent: "Zur Hauptkomponente",
+	addAutoLayout: "Auto-Layout hinzufügen",
+	bringToFront: "In den Vordergrund",
+	sendToBack: "In den Hintergrund",
+	moveToPage: "Auf Seite verschieben",
+	setOpacity: "Deckkraft festlegen",
+	zoomTo100: "Zoom 100 %",
+	zoomToFit: "Einpassen",
+	zoomToSelection: "Auswahl einpassen",
+	groupSelection: "Gruppieren",
+	frameSelection: "Auswahl in Rahmen setzen",
+	showHide: "Ein-/Ausblenden",
+	lockUnlock: "Sperren/Entsperren",
+	unionSelection: "Auswahl vereinen",
+	subtractSelection: "Auswahl subtrahieren",
+	intersectSelection: "Auswahl schneiden",
+	excludeSelection: "Auswahl ausschließen",
+	booleanOperations: "Boolesche Operationen",
+	flipHorizontal: "Horizontal spiegeln",
+	flipVertical: "Vertikal spiegeln",
+	flattenSelection: "Abflachen",
+	outlineText: "Text in Pfade umwandeln",
+	outlineStroke: "Kontur in Pfad umwandeln",
+	useAsMask: "Als Maske verwenden",
+	removeMask: "Maske entfernen",
+	bringForward: "Nach vorne",
+	distributeHorizontal: "Horizontalen Abstand verteilen",
+	distributeVertical: "Vertikalen Abstand verteilen",
+	selectInverse: "Auswahl umkehren",
+	sendBackward: "Nach hinten"
+};
+//#endregion
+export { commands_default };
+
+//# sourceMappingURL=commands.json.js.map

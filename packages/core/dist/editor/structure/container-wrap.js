@@ -1,0 +1,83 @@
+import { computeAbsoluteBounds } from "@open-pencil/scene-graph/geometry";
+//#region src/editor/structure/container-wrap.ts
+function wrapSelectionInContainer(ctx, isTopLevel, containerType, selectedNodes, extraProps) {
+	if (selectedNodes.length === 0) return null;
+	const parentId = selectedNodes[0].parentId ?? ctx.state.currentPageId;
+	if (!selectedNodes.every((n) => (n.parentId ?? ctx.state.currentPageId) === parentId)) return null;
+	const parent = ctx.graph.getNode(parentId);
+	if (!parent) return null;
+	const prevSelection = new Set(ctx.state.selectedIds);
+	const nodeIds = selectedNodes.map((n) => n.id);
+	const origPositions = selectedNodes.map((n) => ({
+		id: n.id,
+		x: n.x,
+		y: n.y
+	}));
+	const { x: minX, y: minY, width: bw, height: bh } = computeAbsoluteBounds(selectedNodes, (id) => ctx.graph.getAbsolutePosition(id));
+	const maxX = minX + bw;
+	const maxY = minY + bh;
+	const parentAbs = isTopLevel(parentId) ? {
+		x: 0,
+		y: 0
+	} : ctx.graph.getAbsolutePosition(parentId);
+	const firstIndex = Math.min(...nodeIds.map((id) => parent.childIds.indexOf(id)));
+	const padding = containerType === "COMPONENT_SET" ? 40 : 0;
+	const containerNames = {
+		COMPONENT_SET: selectedNodes[0].name.split("/")[0]?.trim() || "Component Set",
+		COMPONENT: "Component",
+		GROUP: "Group",
+		FRAME: "Frame"
+	};
+	const containerNode = ctx.graph.createNode(containerType, parentId, {
+		name: containerNames[containerType] ?? containerType,
+		x: minX - parentAbs.x - padding,
+		y: minY - parentAbs.y - padding,
+		width: maxX - minX + padding * 2,
+		height: maxY - minY + padding * 2,
+		fills: containerType === "COMPONENT_SET" ? [{
+			type: "SOLID",
+			color: {
+				r: .96,
+				g: .96,
+				b: .96,
+				a: 1
+			},
+			opacity: 1,
+			visible: true
+		}] : [],
+		...extraProps
+	});
+	const containerId = containerNode.id;
+	ctx.graph.insertChildAt(containerId, parentId, firstIndex);
+	for (const n of selectedNodes) ctx.graph.reparentNode(n.id, containerId);
+	ctx.setSelectedIds(/* @__PURE__ */ new Set([containerId]));
+	ctx.undo.push({
+		label: `Create ${containerType.toLowerCase().replace("_", " ")}`,
+		forward: () => {
+			const c = ctx.graph.createNode(containerType, parentId, {
+				...containerNode,
+				...extraProps,
+				id: containerId
+			});
+			ctx.graph.insertChildAt(c.id, parentId, firstIndex);
+			for (const n of origPositions) ctx.graph.reparentNode(n.id, c.id);
+			ctx.setSelectedIds(/* @__PURE__ */ new Set([c.id]));
+		},
+		inverse: () => {
+			for (const orig of origPositions) {
+				ctx.graph.reparentNode(orig.id, parentId);
+				ctx.graph.updateNode(orig.id, {
+					x: orig.x,
+					y: orig.y
+				});
+			}
+			ctx.graph.deleteNode(containerId);
+			ctx.setSelectedIds(prevSelection);
+		}
+	});
+	return containerId;
+}
+//#endregion
+export { wrapSelectionInContainer };
+
+//# sourceMappingURL=container-wrap.js.map

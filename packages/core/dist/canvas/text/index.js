@@ -1,0 +1,327 @@
+import { DEFAULT_FONT_FAMILY } from "../../constants.js";
+import { resolveRGBAForPreview } from "../../color/management.js";
+import { transformTextCase } from "../../text/case.js";
+import { weightToStyle } from "../../text/font-style.js";
+import { fontManager } from "../../text/fonts.js";
+import { fontFallbackScriptForCharacter } from "../../text/coverage.js";
+import { resolveNodeTextDirection } from "../../text/direction.js";
+import { missingGlyphCharacters } from "../../text/resolver/coverage.js";
+import { fontCoverageDemand, fontFaceDemand, fontRemoteCoverageDemand, fontResolver } from "../../text/resolver/index.js";
+import { uniq } from "es-toolkit/array";
+//#region src/canvas/text/index.ts
+const FONT_FAMILY_CACHE_LIMIT = 256;
+const fontFamilyCache = /* @__PURE__ */ new Map();
+function demandFace(r, node, family, style) {
+	if (fontManager.isStyleLoaded(family, style)) return true;
+	const demand = fontFaceDemand(family, style, node.text);
+	r.trackFontDemand?.(node, demand.key);
+	fontResolver.demandForNode(demand, node.id, r.onFontResolutionSettled);
+	return false;
+}
+function requiredNodeFaces(node) {
+	const baseFamily = node.fontFamily || "Inter";
+	const faces = /* @__PURE__ */ new Map();
+	const add = (family, style) => faces.set(`${family}\0${style}`, {
+		family,
+		style
+	});
+	add(baseFamily, weightToStyle(node.fontWeight, node.italic));
+	for (const run of node.styleRuns) add(run.style.fontFamily ?? baseFamily, weightToStyle(run.style.fontWeight ?? node.fontWeight, run.style.italic ?? node.italic));
+	return Array.from(faces.values());
+}
+function languageForCharacter(node, character) {
+	const index = node.text.indexOf(character);
+	return node.styleRuns.find((item) => index >= item.start && index < item.start + item.length)?.style.textLanguage ?? node.textLanguage;
+}
+function requiredFacesReadiness(r, node) {
+	let pending = false;
+	let exhausted = false;
+	for (const { family, style } of requiredNodeFaces(node)) {
+		if (fontManager.isStyleLoaded(family, style)) continue;
+		const demand = fontFaceDemand(family, style, node.text);
+		const state = fontResolver.state(demand).state;
+		demandFace(r, node, family, style);
+		if (state === "failed" || state === "exhausted") {
+			if (fontManager.isLoaded(family)) continue;
+			exhausted = true;
+		} else pending = true;
+	}
+	if (pending) return "pending";
+	return exhausted ? "exhausted" : "ready";
+}
+function demandRemoteCoverage(r, node, characters) {
+	for (const { family, style } of requiredNodeFaces(node)) {
+		if (!fontManager.remoteStyleNeedsCoverage(family, style, characters)) continue;
+		const demand = fontRemoteCoverageDemand(family, style, characters);
+		const state = fontResolver.state(demand).state;
+		if (state === "idle") {
+			r.trackFontDemand?.(node, demand.key);
+			fontResolver.demandForNode(demand, node.id, r.onFontResolutionSettled);
+			return true;
+		}
+		if (state === "loading") return true;
+		if (state === "loaded") fontResolver.exhaust(demand);
+	}
+	return false;
+}
+function observedGlyphReadiness(r, node) {
+	const paragraph = buildParagraph(r, node);
+	paragraph.layout(resolveParagraphLayoutWidth(node));
+	const missingCharacters = missingGlyphCharacters(node.text, paragraph.getShapedLines());
+	paragraph.delete();
+	if (missingCharacters.length === 0) return "ready";
+	const charactersByScript = /* @__PURE__ */ new Map();
+	for (const character of missingCharacters) {
+		const script = fontFallbackScriptForCharacter(character, languageForCharacter(node, character));
+		if (!script) continue;
+		const characters = charactersByScript.get(script) ?? [];
+		characters.push(character);
+		charactersByScript.set(script, characters);
+	}
+	let pending = false;
+	let exhausted = charactersByScript.size === 0;
+	for (const [script, characters] of charactersByScript) {
+		if (demandRemoteCoverage(r, node, characters)) {
+			pending = true;
+			continue;
+		}
+		const demand = fontCoverageDemand(script, characters);
+		const state = fontResolver.state(demand).state;
+		if (state === "loaded") {
+			fontResolver.exhaust(demand);
+			exhausted = true;
+			continue;
+		}
+		if (state === "exhausted" || state === "failed") {
+			exhausted = true;
+			continue;
+		}
+		pending = true;
+		if (state === "idle") {
+			r.trackFontDemand?.(node, demand.key);
+			fontResolver.demandForNode(demand, node.id, r.onFontResolutionSettled);
+		}
+	}
+	if (pending) return "pending";
+	return exhausted ? "exhausted" : "ready";
+}
+function canObserveGlyphCoverage(r) {
+	return r.ck !== void 0 && r.fontProvider != null && r.fontsLoaded !== void 0;
+}
+function nodeFontReadiness(r, node) {
+	if (node.type !== "TEXT") return "ready";
+	const faces = requiredFacesReadiness(r, node);
+	if (faces !== "ready") return faces;
+	if (!node.text || !canObserveGlyphCoverage(r)) return "ready";
+	return observedGlyphReadiness(r, node);
+}
+function isNodeFontLoaded(r, node) {
+	return nodeFontReadiness(r, node) === "ready";
+}
+function measureTextNode(r, node, maxWidth) {
+	if (!r.fontsLoaded || !r.fontProvider || !isNodeFontLoaded(r, node)) return null;
+	if (node.type !== "TEXT" || !node.text) return null;
+	const paragraph = buildParagraph(r, node);
+	paragraph.layout(resolveParagraphLayoutWidth(node, maxWidth));
+	const width = paragraph.getLongestLine();
+	const height = paragraph.getHeight();
+	paragraph.delete();
+	return {
+		width: Math.ceil(width),
+		height: Math.ceil(height)
+	};
+}
+function buildTextPicture(r, node) {
+	if (!r.fontsLoaded || !r.fontProvider || !isNodeFontLoaded(r, node)) return null;
+	if (node.type !== "TEXT" || !node.text) return null;
+	const ck = r.ck;
+	const recorder = new ck.PictureRecorder();
+	const bounds = ck.LTRBRect(0, 0, node.width || 1e6, node.height || 1e6);
+	const recCanvas = recorder.beginRecording(bounds);
+	const paragraph = buildParagraph(r, node);
+	recCanvas.drawParagraph(paragraph, 0, 0);
+	paragraph.delete();
+	const picture = recorder.finishRecordingAsPicture();
+	recorder.delete();
+	const bytes = picture.serialize();
+	picture.delete();
+	return bytes ?? null;
+}
+function resolveParagraphLayoutWidth(node, maxWidth) {
+	if (maxWidth !== void 0) return maxWidth;
+	if (node.textAutoResize === "WIDTH_AND_HEIGHT") return 1e6;
+	return node.width || 1e6;
+}
+function buildTruncateOpts(node, baseFontSize) {
+	if (node.textTruncation !== "ENDING") return {};
+	const opts = { ellipsis: "…" };
+	if (node.maxLines != null && node.maxLines > 0) opts.maxLines = node.maxLines;
+	else if (node.height > 0) {
+		const lineH = node.lineHeight || baseFontSize * 1.2;
+		opts.maxLines = Math.max(1, Math.floor(node.height / lineH));
+	}
+	return opts;
+}
+function resolveParagraphFontFamilies(primary, style, arabicFallbacks, cjkFallbacks) {
+	const renderPrimary = fontManager.renderFamily(primary, style);
+	const renderArabicFallbacks = arabicFallbacks.map((family) => fontManager.renderFamily(family, "Regular"));
+	const renderCJKFallbacks = cjkFallbacks.map((family) => fontManager.renderFamily(family, "Regular"));
+	const key = `${renderPrimary}\0${renderArabicFallbacks.join("\0")}\0${renderCJKFallbacks.join("\0")}`;
+	const cached = fontFamilyCache.get(key);
+	if (cached) return cached;
+	const families = [renderPrimary];
+	if (primary !== "Inter") families.push(DEFAULT_FONT_FAMILY);
+	families.push(...renderArabicFallbacks, ...renderCJKFallbacks);
+	const resolved = uniq(families);
+	fontFamilyCache.set(key, resolved);
+	if (fontFamilyCache.size > FONT_FAMILY_CACHE_LIMIT) {
+		const oldestKey = fontFamilyCache.keys().next().value;
+		if (oldestKey) fontFamilyCache.delete(oldestKey);
+	}
+	return resolved;
+}
+function getParagraphTextAlign(ck, node) {
+	const direction = resolveNodeTextDirection(node);
+	switch (node.textAlignHorizontal) {
+		case "CENTER": return ck.TextAlign.Center;
+		case "RIGHT": return direction === "RTL" ? ck.TextAlign.Left : ck.TextAlign.Right;
+		case "JUSTIFIED": return ck.TextAlign.Justify;
+		default: return direction === "RTL" ? ck.TextAlign.Right : ck.TextAlign.Left;
+	}
+}
+function textFontVariations(variations) {
+	if (!variations || variations.length === 0) return void 0;
+	return variations.map((variation) => ({
+		axis: variation.axis,
+		value: variation.value
+	}));
+}
+function textFontFeatures(features) {
+	if (!features || features.length === 0) return void 0;
+	return features.map((feature) => ({
+		name: feature.tag.toLowerCase(),
+		value: feature.enabled ? 1 : 0
+	}));
+}
+function textDecorationValue(ck, decoration) {
+	switch (decoration) {
+		case "UNDERLINE": return ck.UnderlineDecoration;
+		case "STRIKETHROUGH": return ck.LineThroughDecoration;
+		default: return ck.NoDecoration;
+	}
+}
+function textDecorationStyleValue(ck, style) {
+	switch (style) {
+		case "DOTTED": return ck.DecorationStyle.Dotted;
+		case "WAVY": return ck.DecorationStyle.Wavy;
+		default: return ck.DecorationStyle.Solid;
+	}
+}
+function textHeightBehaviorValue(ck, leadingTrim) {
+	return leadingTrim === "CAP_HEIGHT" ? ck.TextHeightBehavior.DisableAll : void 0;
+}
+function textDecorationColor(ck, fills, fallback) {
+	const fill = fills?.find((item) => item.visible && item.type === "SOLID");
+	if (!fill) return fallback;
+	const color = resolveRGBAForPreview(fill.color).color;
+	return ck.Color4f(color.r, color.g, color.b, color.a * fill.opacity);
+}
+function styleRunColor(ck, style, baseColor) {
+	const visibleFill = style.fills?.find((fill) => fill.visible && fill.type === "SOLID");
+	if (!visibleFill) return baseColor;
+	const color = resolveRGBAForPreview(visibleFill.color).color;
+	return ck.Color4f(color.r, color.g, color.b, color.a * visibleFill.opacity);
+}
+function styleRunLanguage(style, node) {
+	return style.textLanguage ?? node.textLanguage ?? void 0;
+}
+function pushStyleRun(r, builder, node, run, baseColor, baseFontSize, fontFamilies, halfLeading) {
+	const ck = r.ck;
+	const style = run.style;
+	const runLineHeight = style.lineHeight !== void 0 ? style.lineHeight : node.lineHeight;
+	const runFontSize = style.fontSize ?? baseFontSize;
+	builder.pushStyle(new ck.TextStyle({
+		color: styleRunColor(ck, style, baseColor),
+		fontFamilies: fontFamilies(style.fontFamily ?? (node.fontFamily || "Inter"), style.fontWeight ?? node.fontWeight, style.italic ?? node.italic),
+		fontSize: runFontSize,
+		locale: styleRunLanguage(style, node),
+		fontStyle: {
+			weight: { value: style.fontWeight ?? node.fontWeight },
+			slant: style.italic ?? node.italic ? ck.FontSlant.Italic : ck.FontSlant.Upright
+		},
+		fontVariations: textFontVariations(style.fontVariations ?? node.fontVariations),
+		fontFeatures: textFontFeatures(style.fontFeatures ?? node.fontFeatures),
+		letterSpacing: style.letterSpacing ?? (node.letterSpacing || 0),
+		decoration: textDecorationValue(ck, style.textDecoration ?? node.textDecoration),
+		decorationStyle: textDecorationStyleValue(ck, style.textDecorationStyle ?? node.textDecorationStyle),
+		decorationThickness: style.textDecorationThickness ?? node.textDecorationThickness ?? void 0,
+		decorationColor: textDecorationColor(ck, style.textDecorationFills ?? node.textDecorationFills, baseColor),
+		heightMultiplier: runLineHeight ? runLineHeight / runFontSize : void 0,
+		halfLeading
+	}));
+}
+function addParagraphText(builder, node, text) {
+	builder.addText(transformTextCase(text, node.textCase));
+}
+function addStyledRuns(r, builder, node, baseColor, baseFontSize, fontFamilies, halfLeading) {
+	const text = node.text;
+	let pos = 0;
+	for (const run of node.styleRuns) {
+		if (pos < run.start) addParagraphText(builder, node, text.slice(pos, run.start));
+		pushStyleRun(r, builder, node, run, baseColor, baseFontSize, fontFamilies, halfLeading);
+		addParagraphText(builder, node, text.slice(run.start, run.start + run.length));
+		builder.pop();
+		pos = run.start + run.length;
+	}
+	if (pos < text.length) addParagraphText(builder, node, text.slice(pos));
+}
+function buildParagraph(r, node, color, { halfLeading = false } = {}) {
+	const ck = r.ck;
+	const baseColor = color ?? ck.BLACK;
+	const baseFontSize = node.fontSize || 14;
+	const cjkFallbacks = fontManager.getCJKFallbackFamilies();
+	const arabicFallbacks = fontManager.getArabicFallbackFamilies();
+	const textDirection = resolveNodeTextDirection(node);
+	const truncateOpts = buildTruncateOpts(node, baseFontSize);
+	const fontFamilies = (primary, weight, italic = false) => resolveParagraphFontFamilies(primary, weightToStyle(weight, italic), arabicFallbacks, cjkFallbacks);
+	const paraStyle = new ck.ParagraphStyle({
+		textAlign: getParagraphTextAlign(ck, node),
+		textDirection: textDirection === "RTL" ? ck.TextDirection.RTL : ck.TextDirection.LTR,
+		textHeightBehavior: textHeightBehaviorValue(ck, node.leadingTrim),
+		...truncateOpts,
+		textStyle: {
+			color: baseColor,
+			fontFamilies: fontFamilies(node.fontFamily || "Inter", node.fontWeight, node.italic),
+			fontSize: baseFontSize,
+			locale: node.textLanguage ?? void 0,
+			fontStyle: {
+				weight: { value: node.fontWeight },
+				slant: node.italic ? ck.FontSlant.Italic : ck.FontSlant.Upright
+			},
+			fontVariations: textFontVariations(node.fontVariations),
+			fontFeatures: textFontFeatures(node.fontFeatures),
+			letterSpacing: node.letterSpacing || 0,
+			decoration: textDecorationValue(ck, node.textDecoration),
+			decorationStyle: textDecorationStyleValue(ck, node.textDecorationStyle),
+			decorationThickness: node.textDecorationThickness ?? void 0,
+			decorationColor: textDecorationColor(ck, node.textDecorationFills, baseColor),
+			heightMultiplier: node.lineHeight ? node.lineHeight / baseFontSize : void 0,
+			halfLeading
+		}
+	});
+	if (!r.fontProvider) throw new Error("Font provider not initialized");
+	const builder = ck.ParagraphBuilder.MakeFromFontProvider(paraStyle, r.fontProvider);
+	if (node.styleRuns.length === 0) addParagraphText(builder, node, node.text);
+	else addStyledRuns(r, builder, node, baseColor, baseFontSize, fontFamilies, halfLeading);
+	const paragraph = builder.build();
+	if (node.textAutoResize === "WIDTH_AND_HEIGHT") {
+		paragraph.layout(1e6);
+		paragraph.layout(Math.max(node.width || 1, Math.ceil(paragraph.getLongestLine())));
+	} else paragraph.layout(resolveParagraphLayoutWidth(node));
+	builder.delete();
+	return paragraph;
+}
+//#endregion
+export { buildParagraph, buildTextPicture, isNodeFontLoaded, measureTextNode, nodeFontReadiness, textDecorationStyleValue, textFontFeatures, textFontVariations, textHeightBehaviorValue };
+
+//# sourceMappingURL=index.js.map

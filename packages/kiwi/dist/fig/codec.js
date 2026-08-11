@@ -1,0 +1,2 @@
+import { compress, createNodeChange, createNodeChangesMessage, decodeMessage, decompress, encodeMessage, encodeNodeChangeWithVariables, encodePaintWithVariableBinding, getCompiledSchema, getSchemaBytes, initCodec, isCodecReady, parseVariableId, peekMessageType } from "../chunks/fig/codec.js";
+export { compress, createNodeChange, createNodeChangesMessage, decodeMessage, decompress, encodeMessage, encodeNodeChangeWithVariables, encodePaintWithVariableBinding, getCompiledSchema, getSchemaBytes, initCodec, isCodecReady, parseVariableId, peekMessageType };

@@ -161,6 +161,7 @@
     "unplugin-raw": "^0.6.4",
     "unplugin-vue": "^7.1.1",
     "unplugin-vue-components": "^31.0.0",
+    "unrun": "latest",
     "vite": "^8.0.0",
     "vite-plugin-pwa": "^1.2.0",
     "vue-tsc": "^3.2.5",

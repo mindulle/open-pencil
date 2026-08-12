@@ -27,7 +27,14 @@ export function connectAutomation(getStore: () => EditorStore, authToken: string
   function connect() {
     let socket: WebSocket
     try {
-      socket = new WebSocket(`ws://127.0.0.1:${AUTOMATION_HTTP_PORT}`)
+      const rpcUrl =
+        import.meta.env.VITE_MCP_URL ||
+        (typeof window !== 'undefined' && window.__OPENPENCIL_RPC_URL__
+          ? window.__OPENPENCIL_RPC_URL__
+          : typeof window !== 'undefined'
+            ? `ws://${window.location.host}/mcp-ws`
+            : `ws://127.0.0.1:${AUTOMATION_HTTP_PORT}`)
+      socket = new WebSocket(rpcUrl)
       ws = socket
     } catch (e) {
       console.error(

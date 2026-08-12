@@ -33,8 +33,8 @@ export function automationPlugin(authToken: string | null, corsOrigin: string): 
             PORT: String(AUTOMATION_HTTP_PORT),
             OPENPENCIL_MCP_TCP: '1',
             ...(socketPath ? { OPENPENCIL_MCP_SOCKET: socketPath } : {}),
-            ...(authToken ? { OPENPENCIL_MCP_AUTH_TOKEN: authToken } : {}),
-            OPENPENCIL_MCP_CORS_ORIGIN: corsOrigin,
+            ...(authToken !== null ? { OPENPENCIL_MCP_AUTH_TOKEN: authToken } : {}),
+            OPENPENCIL_MCP_CORS_ORIGIN: '*',
             OPENPENCIL_MCP_ROOT: process.cwd()
           }
         })

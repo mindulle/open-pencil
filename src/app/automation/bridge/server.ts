@@ -12,7 +12,7 @@ import { createAutomationCommandHandlers } from '@/app/automation/bridge/handler
 import type { EditorStore } from '@/app/editor/active-store'
 
 export function connectAutomation(getStore: () => EditorStore, authToken: string | null = null) {
-  const token = authToken ?? randomHex(32)
+  const token = import.meta.env.VITE_MCP_TOKEN || authToken || randomHex(32)
   let ws: WebSocket | null = null
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let intentionalDisconnect = false
